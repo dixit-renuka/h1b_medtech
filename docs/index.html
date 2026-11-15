@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>H-1B Sponsors: MedTech &amp; Healthcare</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#666;--card:#f5f6f8;--line:#e2e4e8;--acc:#0b6bcb;--ok:#1a8a4a;--bad:#c33}
+@media(prefers-color-scheme:dark){:root{--bg:#14161a;--fg:#eceef1;--mut:#9aa0a8;--card:#1d2026;--line:#2c3038;--acc:#5aa2ff;--ok:#4cc380;--bad:#ff7a7a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:24px 16px}h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:24px 0 8px}p.s{color:var(--mut);margin:0 0 16px}
+a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+input,select,button{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);font:inherit}
+input{flex:1;min-width:200px}.w{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{width:100%;border-collapse:collapse}th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--card);font-size:13px}th[data-k]{cursor:pointer}td.n,th.n{text-align:right}
+.tag{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--card);border:1px solid var(--line)}
+.f{color:var(--mut);font-size:13px;margin-top:14px}.up{color:var(--ok)}.dn{color:var(--bad)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.cards div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}.cards b{display:block;font-size:22px}
+.bars div{display:flex;align-items:center;gap:8px;margin:4px 0}.bars span{width:60px;color:var(--mut)}
+.bars i{display:block;height:14px;background:var(--acc);border-radius:3px;min-width:2px}
+</style></head><body><main>
+<div id="list">
+<h1 id="h">H-1B sponsors in MedTech &amp; Healthcare</h1>
+<p class="s" id="meta">Loading USCIS data…</p>
+<div class="bar"><input id="q" placeholder="Search company or city…">
+<select id="cat"><option value="">All sectors</option><option>Medical Device</option><option>Wearables</option><option>Surgical Robotics</option><option>Healthcare</option></select>
+<select id="st"><option value="">All states</option></select></div>
+<div class="w"><table><thead><tr>
+<th data-k="n">Company</th><th data-k="cat">Sector</th><th>Location</th>
+<th class="n" data-k="ia">New</th><th class="n" data-k="ca">Continuing</th><th class="n" data-k="t">Total</th><th class="n" data-k="g">vs prior FY</th></tr></thead><tbody id="b"></tbody></table></div>
+<p class="f"><span id="cnt"></span> <button id="more" hidden>Show more</button></p>
+</div>
+<div id="d" hidden></div>
+<p class="f">Source: USCIS H-1B Employer Data Hub (uscis.gov). Counts are petitions, not people. Sector tags are keyword-based estimates because USCIS publishes only a 2-digit industry code. Employers are identified by name and the last 4 digits of the tax ID. Verify before relying on it.</p>
+<script>
+let rows=[],L=0,sort={k:"t",d:-1},shown=100;const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const cur=r=>r.h[L]||[0,0,0,0];
+fetch("data.json").then(r=>r.json()).then(d=>{L=String(d.latest);
+rows=d.rows.map(r=>{const c=cur(r),p=r.h[String(d.latest-1)];return{...r,ia:c[0],ca:c[2],t:c[0]+c[2],g:p?c[0]+c[2]-(p[0]+p[2]):0,hp:!!p}});
+$("h").textContent="FY"+L+" H-1B sponsors in MedTech & Healthcare";
+$("meta").textContent="USCIS data through FY"+L+(+L<2026?" (FY2026 is not published by USCIS yet; this page switches automatically when it is)":"")+" · history back to FY"+d.years[d.years.length-1]+" · checked "+d.updated.replace("T"," ").replace("Z"," UTC");
+[...new Set(rows.flatMap(r=>r.l.map(x=>x.split(", ").pop())))].filter(Boolean).sort().forEach(s=>$("st").add(new Option(s,s)));route()})
+.catch(()=>$("meta").textContent="Could not load data.json yet. Run the GitHub Action once.");
+function route(){const m=location.hash.match(/^#c=(.+)$/);$("list").hidden=!!m;$("d").hidden=!m;m?detail(decodeURIComponent(m[1])):render()}
+onhashchange=route;
+function render(){const q=$("q").value.toLowerCase(),c=$("cat").value,s=$("st").value;
+let f=rows.filter(r=>(!c||r.cat==c)&&(!s||r.l.some(x=>x.endsWith(", "+s)))&&(!q||(r.n+" "+r.l.join(" ")).toLowerCase().includes(q)));
+f.sort((a,b)=>(a[sort.k]>b[sort.k]?1:-1)*sort.d);$("cnt").textContent=f.length.toLocaleString()+" employers.";
+$("b").innerHTML=f.slice(0,shown).map(r=>`<tr><td><a href="#c=${encodeURIComponent(r.k)}">${esc(r.n)}</a></td><td><span class="tag">${r.cat}</span></td><td>${esc(r.l[0]||"")}</td><td class="n">${r.ia}</td><td class="n">${r.ca}</td><td class="n"><b>${r.t}</b></td><td class="n ${r.g>0?"up":r.g<0?"dn":""}">${r.hp?(r.g>0?"+":"")+r.g:"new"}</td></tr>`).join("");
+$("more").hidden=f.length<=shown}
+function detail(k){const r=rows.find(x=>x.k==k);if(!r){location.hash="";return}scrollTo(0,0);
+const ys=Object.keys(r.h).sort().reverse();let A=0,D=0;ys.forEach(y=>{const h=r.h[y];A+=h[0]+h[2];D+=h[1]+h[3]});
+const tot=y=>r.h[y][0]+r.h[y][2],mx=Math.max(...ys.map(tot),1),rate=(a,d)=>a+d?Math.round(100*a/(a+d))+"%":"–";
+$("d").innerHTML=`<p><a href="#">← All FY${L} sponsors</a></p><h1>${esc(r.n)}</h1>
+<p class="s"><span class="tag">${r.cat}</span> · Tax ID ending ${esc(r.tax||"n/a")} · ${esc(r.l.join(" · "))}</p>
+<div class="cards"><div><b>${tot(L)}</b>FY${L} approvals</div><div><b>${A}</b>approvals, FY${ys[ys.length-1]}–${ys[0]}</div><div><b>${ys.length}</b>years sponsoring</div><div><b>${rate(A,D)}</b>approval rate</div></div>
+<h2>Sponsorship history</h2><div class="w"><table><thead><tr><th>Fiscal year</th><th class="n">New approved</th><th class="n">New denied</th><th class="n">Continuing approved</th><th class="n">Continuing denied</th><th class="n">Approval rate</th></tr></thead><tbody>${ys.map(y=>{const h=r.h[y];return`<tr><td>FY${y}</td><td class="n">${h[0]}</td><td class="n">${h[1]}</td><td class="n">${h[2]}</td><td class="n">${h[3]}</td><td class="n">${rate(h[0]+h[2],h[1]+h[3])}</td></tr>`}).join("")}</tbody></table></div>
+<h2>Approvals per year</h2><div class="bars">${ys.map(y=>`<div><span>FY${y}</span><i style="width:${Math.round(tot(y)/mx*100)*0.8}%"></i>${tot(y)}</div>`).join("")}</div>
+<h2>Next steps</h2><p><a target="_blank" rel="noopener" href="https://www.uscis.gov/tools/reports-and-studies/h-1b-employer-data-hub">Verify on the USCIS Data Hub</a> · <a target="_blank" rel="noopener" href="https://www.google.com/search?q=${encodeURIComponent(r.n+" careers")}">Search ${esc(r.n)} careers</a></p>`}
+["q","cat","st"].forEach(i=>$(i).oninput=()=>{shown=100;render()});$("more").onclick=()=>{shown+=200;render()};
+document.querySelectorAll("th[data-k]").forEach(h=>h.onclick=()=>{const k=h.dataset.k;sort={k,d:sort.k==k?-sort.d:(["n","cat"].includes(k)?1:-1)};render()});
+</script></main></body></html>
